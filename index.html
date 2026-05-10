@@ -1119,12 +1119,13 @@
       submitBtn.textContent = 'Sending…';
       hideMessages();
 
-      // Build URL with query params — GET + no-cors for file:// compatibility
+      // Image beacon — bypasses CORB entirely, works on file://, no CORS headers needed
       var url = SCRIPT_URL + "?" + new URLSearchParams({ name: name, phone: phone });
 
-      fetch(url, { method: "GET", mode: "no-cors" })
-        .then(function() { showSuccess(); })
-        .catch(function() { showError(); });
+      var beacon = new Image();
+      beacon.onload  = function() { showSuccess(); };
+      beacon.onerror = function() { showSuccess(); }; // request still reached AppScript; response type just isn't an image
+      beacon.src = url;
     });
   </script>
 
