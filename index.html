@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>YOGA — Photography Studio</title>
+  <title>Cinematic Heritage — Photography Studio</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=Manrope:wght@300;400;600&display=swap" rel="stylesheet" />
@@ -1119,13 +1119,56 @@
       submitBtn.textContent = 'Sending…';
       hideMessages();
 
-      // Image beacon — bypasses CORB entirely, works on file://, no CORS headers needed
-      var url = SCRIPT_URL + "?" + new URLSearchParams({ name: name, phone: phone });
+      // ── Hidden iframe form submit ──────────────────────────
+      // Native <form> targeting a hidden <iframe> — browser never
+      // tries to read the cross-origin response, so CORB cannot fire.
+      // Works on file://, no fetch/XHR/CORS headers required at all.
 
-      var beacon = new Image();
-      beacon.onload  = function() { showSuccess(); };
-      beacon.onerror = function() { showSuccess(); }; // request still reached AppScript; response type just isn't an image
-      beacon.src = url;
+      // 1. Create (or reuse) the hidden iframe
+      var iframe = document.getElementById('_gs_iframe');
+      if (!iframe) {
+        iframe = document.createElement('iframe');
+        iframe.id   = '_gs_iframe';
+        iframe.name = '_gs_iframe';
+        iframe.style.cssText = 'display:none;position:absolute;width:0;height:0;border:0;';
+        document.body.appendChild(iframe);
+      }
+
+      // 2. Create (or reuse) the hidden form
+      var hiddenForm = document.getElementById('_gs_form');
+      if (!hiddenForm) {
+        hiddenForm = document.createElement('form');
+        hiddenForm.id     = '_gs_form';
+        hiddenForm.method = 'GET';
+        hiddenForm.target = '_gs_iframe';
+        hiddenForm.style.cssText = 'display:none;position:absolute;';
+        document.body.appendChild(hiddenForm);
+      }
+
+      // 3. Populate fields fresh each submission
+      hiddenForm.innerHTML = '';
+      hiddenForm.action    = SCRIPT_URL;
+
+      [['name', name], ['phone', phone]].forEach(function(pair) {
+        var inp   = document.createElement('input');
+        inp.type  = 'hidden';
+        inp.name  = pair[0];
+        inp.value = pair[1];
+        hiddenForm.appendChild(inp);
+      });
+
+      // 4. Show success after iframe loads (or after 2.5 s as fallback)
+      var alreadyDone = false;
+      function done() {
+        if (alreadyDone) return;
+        alreadyDone = true;
+        showSuccess();
+      }
+      iframe.onload = done;
+      setTimeout(done, 2500);
+
+      // 5. Fire!
+      hiddenForm.submit();
     });
   </script>
 
